@@ -1,0 +1,21 @@
+{
+  "iteration": 1,
+  "archive_name": "changes_iter_001.zip",
+  "modified": [],
+  "added": [
+    "cdek.gemspec",
+    "Gemfile",
+    "README.md",
+    "lib/cdek.rb",
+    "lib/cdek/version.rb",
+    "lib/cdek/error.rb",
+    "lib/cdek/configuration.rb",
+    "lib/cdek/connection.rb",
+    "lib/cdek/client.rb",
+    "lib/cdek/railtie.rb",
+    "lib/generators/cdek/install/install_generator.rb",
+    "lib/generators/cdek/install/templates/cdek.rb"
+  ],
+  "deleted": [],
+  "notes": "Итерация 1: фундамент гема cdek. Конфигурация (account, secure_password, test/production mode, таймауты, логгер, user_agent), иерархия ошибок (Cdek::Error -> ConfigurationError, ApiError + BadRequest/Authentication/NotFound/RateLimit/ServerError, ConnectionError/TimeoutError), HTTP-коннект на чистом net/http с потокобезопасным кэшированием OAuth2-токена (client_credentials, /oauth/token), автоматическим обновлением по leeway и ретраем при 401, тонкий Cdek::Client с методами get/post/patch/put/delete, Railtie (Rails.logger по умолчанию), генератор cdek:install с шаблоном инициализатора. Зависимостей рантайма нет, только stdlib. Гем-имя 'cdek' — при необходимости публикации на rubygems.org поменять в gemspec. Отложено в следующие итерации: ресурсы (Calculator, Orders, Locations/Cities/Regions, Offices/Deliverypoints, Webhooks, Print/Labels), тестовый стек (RSpec + WebMock), LICENSE/.gitignore/Rakefile, DSL для payload'ов. Локальный запуск ruby -c недоступен в окружении — синтаксис не проверен интерпретатором, только грепом и визуально."
+}
