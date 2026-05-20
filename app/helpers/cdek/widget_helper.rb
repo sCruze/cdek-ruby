@@ -22,7 +22,9 @@ module Cdek
     #   address_selector:  CSS-селектор адреса выбранного пункта (по умолчанию
     #                      `#order_cdek_point_address_view`)
     #   height:            высота контейнера (по умолчанию 600px — рекомендация из
-    #                      официальной документации виджета)
+    #                      официальной документации виджета). Передаётся inline,
+    #                      чтобы виджет корректно отрисовался даже в flex-родителе
+    #                      (например, внутри модалки с overflow:hidden).
     def cdek_widget_tag(api_key: nil,
                         default_city: "Москва",
                         sender_city: "Москва",
@@ -49,16 +51,23 @@ module Cdek
         address_selector: address_selector
       )
 
-      content_tag :div, class: "cdek-widget", data: data do
+      # Внешний контейнер — flex-column с явной высотой. Root растягивается
+      # на всё свободное место через `flex: 1 1 auto`. `min-height: 0` важно,
+      # чтобы flex не игнорировал ограничение по высоте у root'а в случае,
+      # когда родитель сам является flex-контейнером (например, модалка).
+      content_tag :div, class: "cdek-widget",
+                        data:  data,
+                        style: "display: flex; flex-direction: column; " \
+                               "width: 100%; height: #{height}; min-height: #{height};" do
         safe_join [
           content_tag(:div, "",
                       class: "cdek-widget__root",
-                      data: { cdek_widget_target: "root" },
-                      style: "width: 100%; min-height: #{height};"),
+                      data:  { cdek_widget_target: "root" },
+                      style: "flex: 1 1 auto; min-height: 0; width: 100%;"),
           content_tag(:div, "",
                       class: "cdek-widget__error",
-                      data: { cdek_widget_target: "error" },
-                      style: "display:none;")
+                      data:  { cdek_widget_target: "error" },
+                      style: "display: none;")
         ]
       end
     end
