@@ -5,6 +5,9 @@ require "cdek/error"
 require "cdek/configuration"
 require "cdek/connection"
 require "cdek/client"
+require "cdek/resources/base"
+require "cdek/resources/locations"
+require "cdek/resources/deliverypoints"
 
 module Cdek
   CLIENT_MUTEX = Mutex.new
@@ -45,7 +48,22 @@ module Cdek
         @client        = nil
       end
     end
+
+    # High-level ресурс «Локации» — справочники городов/регионов и suggest.
+    # По умолчанию использует шареный Cdek.client; можно передать кастомный
+    # клиент (например, в тестах с подменённым transport).
+    def locations(custom_client = client)
+      Resources::Locations.new(custom_client)
+    end
+
+    # High-level ресурс «Пункты выдачи» — список ПВЗ/постаматов по фильтрам.
+    def deliverypoints(custom_client = client)
+      Resources::Deliverypoints.new(custom_client)
+    end
   end
 end
 
-require "cdek/railtie" if defined?(Rails::Railtie)
+# Rails Engine — подключает прокси-эндпоинт, виджет, helper. Подгружаем только
+# если хост — Rails-приложение. Версия гема без Rails (standalone скрипты,
+# CLI-утилиты) продолжит работать как тонкий клиент API.
+require "cdek/engine" if defined?(::Rails::Engine)

@@ -1,124 +1,127 @@
-# Cdek
+# cdek
 
-Минималистичный Ruby/Rails-клиент для CDEK API v2.
+Минималистичный Ruby/Rails-клиент для CDEK API v2 + монтируемый Rails Engine
+с виджетом ПВЗ «в коробке». Никаких внешних рантайм-зависимостей.
 
-Никаких внешних рантайм-зависимостей — только стандартная библиотека
-(`net/http`, `json`, `uri`). Автоматически управляет OAuth2-токеном
-(`grant_type=client_credentials`), кэширует и обновляет его, ретраит запрос
-один раз при `401`.
+* OAuth2 client_credentials c потокобезопасным кэшем токена.
+* Конфигурация через ENV или Rails-инициализатор.
+* High-level ресурсы для частых задач: `Cdek.locations`, `Cdek.deliverypoints`.
+* **Rails Engine** с прокси-эндпоинтом для официального JS-виджета ПВЗ
+  (cdek-it/widget@3).
+* Вендорный UMD-бандл виджета — раздаётся через asset pipeline (без CDN).
+* View-хелпер `cdek_widget_tag` — вставка виджета одной строкой.
 
 ## Установка
 
-В `Gemfile` вашего Rails-приложения:
-
 ```ruby
+# Gemfile
 gem "cdek"
 ```
-
-Затем:
 
 ```bash
 bundle install
 bin/rails generate cdek:install
 ```
 
-Генератор создаст `config/initializers/cdek.rb` со всеми ключами для
-настройки.
+Генератор создаёт:
 
-## Конфигурация
+* `config/initializers/cdek.rb` — заготовку настройки;
+* `app/javascript/controllers/cdek_widget_controller.js` — Stimulus-контроллер
+  виджета.
+
+Маршрут смонтируйте сами:
 
 ```ruby
-# config/initializers/cdek.rb
+# config/routes.rb
+Rails.application.routes.draw do
+  mount Cdek::Engine, at: "/cdek"
+  # ...
+end
+```
+
+Переменные окружения:
+
+```
+CDEK_ACCOUNT=...
+CDEK_SECURE_PASSWORD=...
+YANDEX_MAPS_API_KEY=...   # ключ Yandex Maps JS API для карты виджета
+```
+
+## Использование клиента
+
+```ruby
 Cdek.configure do |config|
   config.account         = ENV["CDEK_ACCOUNT"]
   config.secure_password = ENV["CDEK_SECURE_PASSWORD"]
-
-  if Rails.env.production?
-    config.production_mode!  # https://api.cdek.ru/v2
-  else
-    config.test_mode!        # https://api.edu.cdek.ru/v2
-  end
-
-  # Опционально:
-  # config.timeout      = 15
-  # config.open_timeout = 5
-  # config.user_agent   = "MyApp/1.0"
-  # config.logger       = Rails.logger
+  config.production_mode!   # или config.test_mode! для песочницы
 end
+
+# Низкоуровневый вызов:
+Cdek.client.get("/deliverypoints", params: { city_code: 44, type: "PVZ" })
+
+# High-level:
+moscow = Cdek.locations.find_city("Москва")
+points = Cdek.deliverypoints.pvz_for_city(moscow.fetch("code"))
 ```
 
-Для быстрой проверки в песочнице можно подставить публичные тестовые креды
-CDEK:
+## Виджет ПВЗ
 
-```ruby
-config.use_sandbox_credentials!
+В любой view:
+
+```erb
+<%= cdek_widget_tag api_key:      ENV["YANDEX_MAPS_API_KEY"],
+                    default_city: "Москва",
+                    modal_id:     "cdek-points-modal" %>
 ```
 
-## Использование
+или в HAML:
 
-`Cdek.client` — потокобезопасный шареный клиент. Все методы принимают
-относительный путь к API; токен подставляется автоматически.
-
-```ruby
-# Расчёт тарифа
-Cdek.client.post(
-  "/calculator/tariff",
-  body: {
-    tariff_code:   137,
-    from_location: { code: 270 },
-    to_location:   { code: 44 },
-    packages:      [{ weight: 1000, length: 10, width: 10, height: 10 }]
-  }
-)
-
-# Список городов
-Cdek.client.get("/location/cities", params: { country_codes: "RU", size: 10 })
-
-# Создание заказа
-Cdek.client.post("/orders", body: order_payload)
-
-# Получение заказа по UUID
-Cdek.client.get("/orders/#{uuid}")
+```haml
+= cdek_widget_tag api_key: ENV["YANDEX_MAPS_API_KEY"],
+                  default_city: "Москва",
+                  modal_id: "cdek-points-modal"
 ```
 
-Ответ — распарсенный `Hash` из JSON-тела.
+Что делает хелпер:
 
-Высокоуровневые обёртки (`Cdek::Resources::Calculator`, `::Orders`,
-`::Locations`, `::Offices`, `::Webhooks`) появятся в следующей итерации.
+1. Рендерит `<div class="cdek-widget">` со всеми data-* для Stimulus.
+2. JS-контроллер `cdek-widget` (поставлен генератором) подгружает
+   `/assets/cdek/widget.umd.js` (вшитый в гем UMD-бандл) и инициализирует
+   `window.CDEKWidget` в root-таргете.
+3. Виджет шлёт запросы на `/cdek/widget_service` (Engine route).
+4. На `onChoose` контроллер пишет данные выбранного пункта в скрытые поля
+   формы — по умолчанию:
 
-## Ошибки
+   * `#order_cdek_point_code`
+   * `#order_cdek_point_name`
+   * `#order_cdek_point_address`
+   * `#order_cdek_city_code`
 
-Все ошибки наследуются от `Cdek::Error`:
+   DOM-id переопределяются именованными аргументами `field_code`,
+   `field_name`, `field_address`, `field_city_code` хелпера.
 
-| Класс | Когда возникает |
-|-------|-----------------|
-| `Cdek::ConfigurationError` | не заданы `account` / `secure_password` |
-| `Cdek::AuthenticationError` | `401` после повторной попытки |
-| `Cdek::BadRequestError` | `400` — невалидный payload |
-| `Cdek::NotFoundError` | `404` |
-| `Cdek::RateLimitError` | `429` |
-| `Cdek::ServerError` | `5xx` |
-| `Cdek::ApiError` | прочие неуспешные статусы |
-| `Cdek::ConnectionError` | сетевая ошибка |
-| `Cdek::TimeoutError` | таймаут |
+5. Также диспатчится событие `cdek-widget:chosen` с `detail.office` —
+   можно слушать в собственных Stimulus-контроллерах.
 
-У `ApiError` доступны `#status`, `#body`, `#errors`:
+### Закрытие модалки
 
-```ruby
-begin
-  Cdek.client.post("/orders", body: payload)
-rescue Cdek::BadRequestError => e
-  Rails.logger.warn(e.errors) # массив ошибок от CDEK
-end
-```
+Если виджет встроен в модалку, передайте её `id` в `modal_id:` — после
+выбора пункта будет отправлено `document.dispatchEvent(new CustomEvent(
+"modal:close", { detail: { id: <modal_id> } }))`. Реализация закрытия —
+на стороне хост-приложения (его modal-контроллер слушает это событие).
 
-## Сброс состояния
+## Обновление с 0.2.0 → 0.3.0
 
-```ruby
-Cdek.client.reset_token! # принудительно перевыпустить токен
-Cdek.reset_client!       # пересоздать клиента (после смены конфигурации)
-Cdek.reset!              # сброс и конфигурации, и клиента
-```
+1. `bundle update cdek`
+2. В `config/routes.rb` добавить:
+
+   ```ruby
+   mount Cdek::Engine, at: "/cdek"
+   ```
+
+3. `bin/rails generate cdek:install` — поставит Stimulus-контроллер.
+4. Внешний API (`Cdek.configure`, `Cdek.client`, `Cdek.locations`,
+   `Cdek.deliverypoints`) — без изменений.
 
 ## Лицензия
 

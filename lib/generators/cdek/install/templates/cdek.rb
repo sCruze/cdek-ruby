@@ -24,5 +24,11 @@ Cdek.configure do |config|
   # config.timeout      = 15
   # config.open_timeout = 5
   # config.user_agent   = "MyApp/1.0 (+https://example.com)"
-  # config.logger       = Rails.logger
+  config.logger = Rails.logger
+
+  # Fallback на публичные тестовые креды CDEK, если ENV пустые. Удобно для
+  # development/test, чтобы виджет хотя бы открывался без локальной настройки.
+  unless config.credentials_present?
+    config.use_sandbox_credentials! unless Rails.env.production?
+  end
 end

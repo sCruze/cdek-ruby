@@ -1,14 +1,17 @@
+*.gem
+*.rbc
 /.bundle/
-/.yardoc
-/_yardoc/
+/Gemfile.lock
+/pkg/
+/tmp/
 /coverage/
 /doc/
-/pkg/
-/spec/reports/
-/tmp/
-manifest.json
-Gemfile.lock
-*.gem
-pkg/
-.bundle/
+
+# Служебный файл итерации, не часть гема
+/manifest.json
+
+# IDE
+/.idea/
+/.vscode/
+*.swp
 .DS_Store
