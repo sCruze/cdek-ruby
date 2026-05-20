@@ -1,87 +1,69 @@
 # Changelog
 
+## 0.3.4
+
+* **Критический фикс шаблона Stimulus-контроллера** в
+  `lib/generators/cdek/install/templates/cdek_widget_controller.js`.
+  Виджет `@cdek-it/widget@3` (UMD-бандл, который мы шипим локально)
+  ожидает параметр `root` как **строковый id DOM-элемента**, не как сам
+  HTMLElement. Внутри он вызывает `document.getElementById(params.root)`.
+  Если передать туда объект — getElementById возвращает null, виджет
+  безмолвно создаёт «висячий» div с className равным `"[object HTMLDivElement]"`
+  и работает с ним вне страницы. Симптомы: запросы к servicePath идут
+  200 OK, авторизация в CDEK проходит, но UI виджета не появляется
+  в нашем root-таргете — он висит в document.body отдельным узлом.
+
+  Новый шаблон перед `new CDEKWidget(...)` гарантирует уникальный id
+  на root-таргете и передаёт виджету именно строку.
+
+  Если ты уже устанавливал гем ранее и Stimulus-контроллер живёт в
+  `app/javascript/controllers/cdek_widget_controller.js` твоего проекта —
+  обнови файл вручную или перезапусти генератор с флагом `--force`:
+
+      bin/rails generate cdek:install --force
+
+  (`--force` затрёт локальные правки в этом файле и в
+  `config/initializers/cdek.rb` — будь осторожен.)
+
 ## 0.3.3
 
 * Откат flex-лейаута контейнера виджета, введённого в 0.3.2. Хелпер
   `cdek_widget_tag` снова рендерит обычную box-model:
   внешний `.cdek-widget` — `display: block; width: 100%; height: <height>;`,
-  root — `width: 100%; height: 100%;`. Причина: в `@cdek-it/widget@3` (Vue 3)
-  виджет на момент `new CDEKWidget({root: ...})` считывает вычисленную
-  высоту root-элемента. Во flex-режиме с `flex: 1 1 auto; min-height: 0;`
-  у пустого root'а `flex-basis: auto` давал computed-height = 0, виджет
-  «инициализировался» (запросы офисов уходили), но Vue не отрисовывал UI.
-  Теперь высота root'а гарантированно равна высоте внешнего контейнера.
+  root — `width: 100%; height: 100%;`.
 
 ## 0.3.2
 
 * Хелпер `cdek_widget_tag` теперь рендерит контейнер как flex-column с
   явной высотой, а root-элемент виджета — c `flex: 1 1 auto; min-height: 0`.
-  Это исправляет частый кейс «карта не видна»: когда виджет вставлен в
-  модалку с `overflow: hidden` или внутри flex-родителя, высота root'а
-  схлопывалась до 0 и Yandex Maps не имел места для отрисовки.
-  Параметр `height:` хелпера (по умолчанию `"600px"`) теперь применяется
-  и к внешнему контейнеру, не только к root.
-
-  **Замечание:** в 0.3.3 этот подход откачен — см. запись 0.3.3.
+  **Замечание:** в 0.3.3 этот подход откачен.
 
 ## 0.3.1
 
-* Дефолтный шаблон `config/initializers/cdek.rb` (создаваемый
-  `bin/rails g cdek:install`) переписан: по умолчанию используется
-  **боевой** контур API (`config.production_mode!`) — поскольку
-  установка гема обычно подразумевает наличие настоящих учётных
-  данных, даже если Rails запущен в `development`. Прежнее поведение
-  «sandbox в dev/test» приводило к ошибкам авторизации виджета, когда
-  в `.env` лежали уже выданные CDEK боевые ключи.
-* Для разработки на песочнице добавлен опт-ин через переменную
-  окружения `CDEK_SANDBOX=1` (или `true`/`yes`/`on`). При её наличии
-  initializer вызывает `config.test_mode!`.
-* Из шаблона убран автоматический фолбэк `use_sandbox_credentials!` —
-  он маскировал ошибки конфигурации (например, опечатки в названиях
-  ENV-переменных). Вызов остался доступным в комментарии для тех,
-  кто хочет быстрый старт без своих кредов.
+* Дефолтный шаблон `config/initializers/cdek.rb` переписан: по
+  умолчанию используется боевой контур API (`config.production_mode!`).
+  Опт-ин на песочницу — через `ENV["CDEK_SANDBOX"]`.
 
 ## 0.3.0
 
-* Гем превращён в **монтируемый Rails Engine** (`Cdek::Engine`). Подключается
-  одной строкой:
-
-      mount Cdek::Engine, at: "/cdek"
-
-* Добавлен серверный прокси-эндпоинт для официального JS-виджета ПВЗ СДЭК
-  (cdek-it/widget v3) — Ruby-аналог `service.php`. Маршрут:
-  `GET|POST /cdek/widget_service`. Класс: `Cdek::WidgetServiceController`.
-
-* Вендорный JS-бандл виджета (`@cdek-it/widget@3.11.1`) включён в гем и
-  отдаётся через asset pipeline по пути `/assets/cdek/widget.umd.js`.
-  Никаких внешних CDN-ссылок: всё работает локально.
-
-* Добавлен view-хелпер `cdek_widget_tag` (модуль `Cdek::WidgetHelper`),
-  автоматически подключённый в `ActionController::Base` хост-приложения.
-  Рендерит контейнер виджета со всеми data-* атрибутами для Stimulus.
-
-* Генератор `cdek:install` теперь дополнительно копирует Stimulus-контроллер
-  `app/javascript/controllers/cdek_widget_controller.js` в хост-приложение.
-
-* Добавлены high-level ресурсы `Cdek.locations` и `Cdek.deliverypoints`
-  (перенесены из 0.2.0, остаются без изменений).
+* Гем превращён в монтируемый Rails Engine (`Cdek::Engine`).
+* Серверный прокси `Cdek::WidgetServiceController` для официального
+  JS-виджета ПВЗ СДЭК (Ruby-аналог service.php).
+* Вендорный UMD-бандл `@cdek-it/widget@3.11.1` отдаётся через
+  asset pipeline по `/assets/cdek/widget.umd.js`.
+* View-хелпер `cdek_widget_tag` (`Cdek::WidgetHelper`).
+* Генератор `cdek:install` ставит initializer + Stimulus-контроллер.
 
 ### Breaking changes
 
-* `Cdek::Railtie` удалён, заменён на `Cdek::Engine`. Внешний API
-  (`Cdek.configure`, `Cdek.client`, ...) — без изменений. Если в проекте
-  была явная ссылка на `Cdek::Railtie` (что маловероятно), её нужно убрать.
+* `Cdek::Railtie` удалён, заменён на `Cdek::Engine`.
 
 ## 0.2.0
 
-* High-level ресурсы:
-  - `Cdek::Resources::Locations` — `cities`, `regions`, `suggest_cities`,
-    шорткат `find_city(name, country_codes: "RU")`.
-  - `Cdek::Resources::Deliverypoints` — `list`, `pvz_for_city`, `find(code)`.
-* Доступ из основного модуля: `Cdek.locations`, `Cdek.deliverypoints`.
+* High-level ресурсы `Cdek::Resources::Locations` и
+  `Cdek::Resources::Deliverypoints`.
 
 ## 0.1.0
 
-* Первый релиз: `Cdek.configure`, `Cdek::Client`, OAuth2 client_credentials с
-  потокобезопасным кэшем токена, иерархия ошибок (`Cdek::Error`,
-  `Cdek::ConfigurationError`, `Cdek::ApiError`), Railtie, генератор `cdek:install`.
+* Первый релиз: тонкий клиент CDEK API v2, OAuth2, иерархия ошибок,
+  Railtie, генератор `cdek:install`.
