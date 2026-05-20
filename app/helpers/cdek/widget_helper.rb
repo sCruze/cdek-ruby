@@ -21,10 +21,11 @@ module Cdek
     #                      `[data-cdek-widget-label]`)
     #   address_selector:  CSS-селектор адреса выбранного пункта (по умолчанию
     #                      `#order_cdek_point_address_view`)
-    #   height:            высота контейнера (по умолчанию 600px — рекомендация из
-    #                      официальной документации виджета). Передаётся inline,
-    #                      чтобы виджет корректно отрисовался даже в flex-родителе
-    #                      (например, внутри модалки с overflow:hidden).
+    #   height:            высота контейнера (по умолчанию `"600px"` — рекомендация
+    #                      из официальной документации виджета). Виджет ТРЕБУЕТ,
+    #                      чтобы у root-элемента на момент инициализации была
+    #                      явная вычисленная высота, иначе Vue видит 0px и
+    #                      ничего не рисует.
     def cdek_widget_tag(api_key: nil,
                         default_city: "Москва",
                         sender_city: "Москва",
@@ -51,19 +52,20 @@ module Cdek
         address_selector: address_selector
       )
 
-      # Внешний контейнер — flex-column с явной высотой. Root растягивается
-      # на всё свободное место через `flex: 1 1 auto`. `min-height: 0` важно,
-      # чтобы flex не игнорировал ограничение по высоте у root'а в случае,
-      # когда родитель сам является flex-контейнером (например, модалка).
+      # Простой box-model: внешний контейнер с явной высотой, root растягивается
+      # на 100% этой высоты. Без flex — он давал root'у `flex-basis: auto`,
+      # из-за чего на момент Vue-инициализации виджета вычисленная высота
+      # была 0 и карта не отрисовывалась (виджет сам по доке требует, чтобы
+      # высота root была задана явно).
       content_tag :div, class: "cdek-widget",
                         data:  data,
-                        style: "display: flex; flex-direction: column; " \
-                               "width: 100%; height: #{height}; min-height: #{height};" do
+                        style: "display: block; width: 100%; " \
+                               "height: #{height}; min-height: #{height};" do
         safe_join [
           content_tag(:div, "",
                       class: "cdek-widget__root",
                       data:  { cdek_widget_target: "root" },
-                      style: "flex: 1 1 auto; min-height: 0; width: 100%;"),
+                      style: "width: 100%; height: 100%;"),
           content_tag(:div, "",
                       class: "cdek-widget__error",
                       data:  { cdek_widget_target: "error" },
