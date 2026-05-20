@@ -8,17 +8,18 @@ Cdek.configure do |config|
   config.account         = ENV["CDEK_ACCOUNT"]
   config.secure_password = ENV["CDEK_SECURE_PASSWORD"]
 
-  # Выбор окружения CDEK.
-  # * production_mode! — боевой API  https://api.cdek.ru/v2
-  # * test_mode!       — песочница   https://api.edu.cdek.ru/v2
-  if Rails.env.production?
-    config.production_mode!
-  else
+  # Контур CDEK API. По умолчанию — боевой (api.cdek.ru/v2). С боевыми
+  # учётными данными это правильный выбор и в development. Чтобы временно
+  # переключиться на песочницу (api.edu.cdek.ru/v2) — добавь в .env:
+  #
+  #   CDEK_SANDBOX=1
+  #
+  # либо явно поменяй вызов на config.test_mode!.
+  if ENV["CDEK_SANDBOX"].to_s.match?(/\A(1|true|yes|on)\z/i)
     config.test_mode!
+  else
+    config.production_mode!
   end
-
-  # Быстрый старт с публичными тестовыми кредами CDEK (только для песочницы):
-  # config.use_sandbox_credentials!
 
   # Опциональная тонкая настройка:
   # config.timeout      = 15
@@ -26,9 +27,6 @@ Cdek.configure do |config|
   # config.user_agent   = "MyApp/1.0 (+https://example.com)"
   config.logger = Rails.logger
 
-  # Fallback на публичные тестовые креды CDEK, если ENV пустые. Удобно для
-  # development/test, чтобы виджет хотя бы открывался без локальной настройки.
-  unless config.credentials_present?
-    config.use_sandbox_credentials! unless Rails.env.production?
-  end
+  # Быстрый старт с публичными тестовыми кредами CDEK (только для песочницы):
+  # config.use_sandbox_credentials!
 end
