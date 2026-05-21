@@ -21,11 +21,7 @@ module Cdek
     #                      `[data-cdek-widget-label]`)
     #   address_selector:  CSS-селектор адреса выбранного пункта (по умолчанию
     #                      `#order_cdek_point_address_view`)
-    #   height:            высота контейнера (по умолчанию `"600px"` — рекомендация
-    #                      из официальной документации виджета). Виджет ТРЕБУЕТ,
-    #                      чтобы у root-элемента на момент инициализации была
-    #                      явная вычисленная высота, иначе Vue видит 0px и
-    #                      ничего не рисует.
+    #   height:            высота контейнера (по умолчанию `"600px"`).
     def cdek_widget_tag(api_key: nil,
                         default_city: "Москва",
                         sender_city: "Москва",
@@ -52,20 +48,22 @@ module Cdek
         address_selector: address_selector
       )
 
-      # Простой box-model: внешний контейнер с явной высотой, root растягивается
-      # на 100% этой высоты. Без flex — он давал root'у `flex-basis: auto`,
-      # из-за чего на момент Vue-инициализации виджета вычисленная высота
-      # была 0 и карта не отрисовывалась (виджет сам по доке требует, чтобы
-      # высота root была задана явно).
+      # Box-model + position:relative — обязательные условия для корректной
+      # отрисовки JS-виджета. Виджет внутри использует absolute-позиционирование
+      # для overlay'ев карты, тултипов и поповеров; без позиционированного
+      # предка они привязываются к ближайшему позиционированному элементу
+      # (часто — корню документа), что выкидывает их визуально за пределы
+      # виджета. Поэтому ставим эти стили inline у себя, чтобы хост-приложение
+      # ничего дополнительно не требовалось настраивать.
       content_tag :div, class: "cdek-widget",
                         data:  data,
-                        style: "display: block; width: 100%; " \
+                        style: "display: block; position: relative; width: 100%; " \
                                "height: #{height}; min-height: #{height};" do
         safe_join [
           content_tag(:div, "",
                       class: "cdek-widget__root",
                       data:  { cdek_widget_target: "root" },
-                      style: "width: 100%; height: 100%;"),
+                      style: "position: relative; width: 100%; height: 100%;"),
           content_tag(:div, "",
                       class: "cdek-widget__error",
                       data:  { cdek_widget_target: "error" },
@@ -102,7 +100,6 @@ module Cdek
       if respond_to?(:asset_path)
         asset_path("cdek/widget.umd.js")
       else
-        # Fallback на случай, если asset pipeline отключён (маловероятно).
         "/assets/cdek/widget.umd.js"
       end
     end
