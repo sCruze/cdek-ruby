@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.9
+
+* В `cdek.gemspec` добавлена development-зависимость `rake`, потому что
+  `Rakefile` использует `bundler/gem_tasks`, а `bundle exec rake build`
+  падал, если `rake` не был явно включён в bundle.
+
 ## 0.3.8
 
 * `cdek_widget_tag` больше не подставляет статичный DEFAULT_GOODS, если
