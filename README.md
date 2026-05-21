@@ -71,6 +71,7 @@ points = Cdek.deliverypoints.pvz_for_city(moscow.fetch("code"))
 ```erb
 <%= cdek_widget_tag api_key:      ENV["YANDEX_MAPS_API_KEY"],
                     default_city: "Москва",
+                    goods:        current_cart.cdek_goods,
                     modal_id:     "cdek-points-modal" %>
 ```
 
@@ -79,8 +80,17 @@ points = Cdek.deliverypoints.pvz_for_city(moscow.fetch("code"))
 ```haml
 = cdek_widget_tag api_key: ENV["YANDEX_MAPS_API_KEY"],
                   default_city: "Москва",
+                  goods: current_cart.cdek_goods,
                   modal_id: "cdek-points-modal"
 ```
+
+
+`goods:` должен приходить из хост-приложения. Гем не подставляет
+статичный «средний короб», чтобы CDEK не считал доставку по выдуманным
+габаритам. Формат одного элемента массива: `width`, `height`, `length`
+в сантиметрах, `weight` в граммах. Если в приложении размеры хранятся в
+миллиметрах, перед передачей в виджет их нужно перевести в сантиметры;
+если вес хранится в килограммах — перевести в граммы.
 
 Что делает хелпер:
 

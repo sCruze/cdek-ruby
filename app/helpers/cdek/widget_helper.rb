@@ -8,11 +8,6 @@ module Cdek
   # хелпер `cdek_widget_tag`, который рендерит блок-контейнер для JS-виджета
   # ПВЗ СДЭК со всеми data-* атрибутами для Stimulus.
   module WidgetHelper
-    # Дефолтный goods для виджета — «один средний коробок». Используется,
-    # если хост-приложение не передало свой массив. С таким goods CDEK
-    # вернёт тарифы для коробки 30×10×30 см и веса 1 кг.
-    DEFAULT_GOODS = [{ width: 30, height: 10, length: 30, weight: 1 }].freeze
-
     # Рендерит блок-контейнер для JS-виджета. Виджет сам ставит карту,
     # список ПВЗ и фильтры — нам нужно только дать ему div и Yandex-ключ.
     #
@@ -26,10 +21,9 @@ module Cdek
     #                      показывая "Выберите тариф").
     #   goods:             массив хэшей габаритов и веса для расчёта тарифа.
     #                      Каждый элемент: { width: Integer (см), height: Integer (см),
-    #                      length: Integer (см), weight: Numeric (кг) }. По умолчанию —
-    #                      DEFAULT_GOODS (одна коробка 30×10×30 / 1 кг). Для реальных
-    #                      корзин хост-приложение должно собрать массив из cart-items
-    #                      (например, в presenter'е/decorator'е) и передать сюда.
+    #                      length: Integer (см), weight: Integer (г) }. Гем не
+    #                      подставляет дефолтные габариты: хост-приложение должно
+    #                      собрать массив из реальных cart-items и передать сюда.
     #   modal_id:          id модалки-обёртки — для авто-закрытия по выбору пункта
     #   field_*:           DOM-id скрытых input'ов формы заказа, куда писать данные
     #                      о выбранном пункте (по умолчанию совпадают с конвенциями,
@@ -52,7 +46,7 @@ module Cdek
                         label_selector:    "[data-cdek-widget-label]",
                         address_selector:  "#order_cdek_point_address_view",
                         height: "600px")
-      goods_payload = goods.is_a?(Array) && goods.any? ? goods : DEFAULT_GOODS
+      goods_payload = goods.is_a?(Array) ? goods : []
 
       data = cdek_widget_data(
         api_key:           api_key.presence || ENV["YANDEX_MAPS_API_KEY"].to_s,

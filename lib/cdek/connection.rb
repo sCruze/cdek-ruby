@@ -195,12 +195,30 @@ module Cdek
 
     def log_request(method, uri, body)
       configuration.logger&.debug do
-        "[CDEK] #{method.to_s.upcase} #{uri} body=#{body && truncate(body)}"
+        "[CDEK] #{method.to_s.upcase} #{uri} body=#{loggable_request_body(uri, body)}"
       end
     end
 
     def log_response(response)
-      configuration.logger&.debug { "[CDEK] <- #{response.code} #{truncate(response.body)}" }
+      configuration.logger&.debug { "[CDEK] <- #{response.code} #{loggable_response_body(response)}" }
+    end
+
+    def loggable_request_body(uri, body)
+      if uri.path.end_with?(TOKEN_PATH)
+        "[FILTERED]"
+      else
+        body && truncate(body)
+      end
+    end
+
+    def loggable_response_body(response)
+      parsed = parse_body(response.body)
+
+      if parsed.is_a?(Hash) && parsed.key?("access_token")
+        truncate(JSON.generate(parsed.merge("access_token" => "[FILTERED]")))
+      else
+        truncate(response.body)
+      end
     end
 
     def truncate(text)
