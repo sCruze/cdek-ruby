@@ -5,8 +5,8 @@ require_relative "lib/cdek/version"
 Gem::Specification.new do |spec|
   spec.name        = "cdek"
   spec.version     = Cdek::VERSION
-  spec.authors     = ["Your Name"]
-  spec.email       = ["you@example.com"]
+  spec.authors     = ["Sergey Korolyov"]
+  spec.email       = ["s.cruze99@yandex.ru"]
 
   spec.summary     = "Ruby/Rails клиент и Engine для CDEK API v2 с виджетом ПВЗ"
   spec.description = "Тонкий клиент для CDEK API v2 без внешних рантайм-зависимостей: " \
