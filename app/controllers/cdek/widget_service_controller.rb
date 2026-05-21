@@ -12,11 +12,31 @@ module Cdek
   # маппинг ошибок).
   #
   # Эндпоинт публичный read-only — не меняет состояние хост-приложения,
-  # авторизация выполняется на нашей стороне CDEK-токенами. CSRF выключен
-  # через :null_session, чтобы виджет, не знающий о Rails-токенах, мог делать
-  # POST.
+  # авторизация выполняется на нашей стороне CDEK-токенами. CSRF полностью
+  # пропускаем (skip_forgery_protection) — виджет не знает о Rails-токенах,
+  # а raise/null_session засоряют логи строкой
+  # "Can't verify CSRF token authenticity" на каждый POST виджета.
+  #
+  # ВАЖНО: wrap_parameters принудительно отключён. По умолчанию Rails для
+  # JSON-запросов оборачивает body в ключ, совпадающий с именем контроллера
+  # (`widget_service`), и это удваивает все поля запроса. Удвоенные поля
+  # утекали в CDEK API как лишний ключ "widget_service" — CDEK его молча
+  # игнорировал (200 OK), но логи и сетевой трафик засорялись копией.
   class WidgetServiceController < ::ActionController::Base
-    protect_from_forgery with: :null_session
+    skip_forgery_protection
+    wrap_parameters false
+
+    # Имя ключа, под который Rails-обёртка кладёт дубликат параметров,
+    # если wrap_parameters всё же сработает (например, при переопределении
+    # на уровне ApplicationController наследниками). Удаляется на всякий
+    # случай вторым эшелоном защиты.
+    WRAPPER_KEY = "widget_service"
+    private_constant :WRAPPER_KEY
+
+    # Служебные ключи Rails-роутинга и виджета, которые не должны утечь
+    # в тело запроса к CDEK API.
+    EXCLUDED_PARAM_KEYS = %w[action controller format].freeze
+    private_constant :EXCLUDED_PARAM_KEYS
 
     def call
       cdek_action = cdek_request_action
@@ -46,13 +66,12 @@ module Cdek
           request.request_parameters["action"].presence
       end
 
-      # Все параметры запроса, кроме служебных (:action виджета — мы его уже
-      # извлекли — и :controller, который добавляет Rails-роутинг). Передаются
-      # в CDEK API как есть.
+      # Все параметры запроса, кроме служебных Rails-роутинга и Rails-обёртки.
+      # Передаются в CDEK API как есть.
       def cdek_filtered_params
         request.query_parameters
                .merge(request.request_parameters)
-               .except("action", "controller")
+               .except(*EXCLUDED_PARAM_KEYS, WRAPPER_KEY)
                .to_h
       end
   end
