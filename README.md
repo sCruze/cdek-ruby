@@ -6,6 +6,7 @@
 * OAuth2 client_credentials c потокобезопасным кэшем токена.
 * Конфигурация через ENV или Rails-инициализатор.
 * High-level ресурсы для частых задач: `Cdek.locations`, `Cdek.deliverypoints`.
+* Поиск CDEK-кода города и JSON-подсказки городов для autocomplete.
 * **Rails Engine** с прокси-эндпоинтом для официального JS-виджета ПВЗ
   (cdek-it/widget@3).
 * Вендорный UMD-бандл виджета — раздаётся через asset pipeline (без CDN).
@@ -62,6 +63,10 @@ Cdek.client.get("/deliverypoints", params: { city_code: 44, type: "PVZ" })
 # High-level:
 moscow = Cdek.locations.find_city("Москва")
 points = Cdek.deliverypoints.pvz_for_city(moscow.fetch("code"))
+
+# Город по пользовательскому вводу:
+city_code = Cdek.city_code("Москва")
+suggestions = Cdek.city_suggestions("мос")
 ```
 
 ## Виджет ПВЗ
@@ -98,7 +103,11 @@ points = Cdek.deliverypoints.pvz_for_city(moscow.fetch("code"))
 2. JS-контроллер `cdek-widget` (поставлен генератором) подгружает
    `/assets/cdek/widget.umd.js` (вшитый в гем UMD-бандл) и инициализирует
    `window.CDEKWidget` в root-таргете.
-3. Виджет шлёт запросы на `/cdek/widget_service` (Engine route).
+3. Виджет шлёт запросы на `/cdek/widget_service` (Engine route). Если
+   `default_city` передан строкой, Stimulus-контроллер добавляет к servicePath
+   внутренний параметр `widget_city`, а Engine преобразует его в `city_code`
+   перед запросом `/deliverypoints`. Это не даёт виджету загружать все ПВЗ
+   страны при открытии карты.
 4. На `onChoose` контроллер пишет данные выбранного пункта в скрытые поля
    формы — по умолчанию:
 
@@ -112,6 +121,18 @@ points = Cdek.deliverypoints.pvz_for_city(moscow.fetch("code"))
 
 5. Также диспатчится событие `cdek-widget:chosen` с `detail.office` —
    можно слушать в собственных Stimulus-контроллерах.
+
+### Подсказки городов
+
+Engine предоставляет read-only JSON endpoint для autocomplete:
+
+```text
+GET /cdek/city_suggestions?q=мос
+```
+
+Ответ — массив нормализованных объектов с `code`, `city`, `region`,
+`country`, `country_code` и готовым `label`. UI поля ввода, debounce и
+выпадающий список остаются на стороне хост-приложения.
 
 ### Закрытие модалки
 

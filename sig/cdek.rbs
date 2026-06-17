@@ -1,4 +1,6 @@
 module Cdek
   VERSION: String
-  # See the writing guide of rbs: https://github.com/ruby/rbs#guides
+
+  def self.city_code: (untyped name, **untyped options) -> untyped
+  def self.city_suggestions: (untyped query, **untyped options) -> Array[Hash[Symbol, untyped]]
 end

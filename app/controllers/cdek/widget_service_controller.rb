@@ -38,6 +38,11 @@ module Cdek
     EXCLUDED_PARAM_KEYS = %w[action controller format].freeze
     private_constant :EXCLUDED_PARAM_KEYS
 
+    # Дополнительный параметр engine'а: хост-приложение может передать
+    # пользовательский город текстом, а gem преобразует его в city_code CDEK.
+    WIDGET_CITY_KEY = "widget_city"
+    private_constant :WIDGET_CITY_KEY
+
     def call
       cdek_action = cdek_request_action
 
@@ -67,12 +72,26 @@ module Cdek
       end
 
       # Все параметры запроса, кроме служебных Rails-роутинга и Rails-обёртки.
-      # Передаются в CDEK API как есть.
+      # Передаются в CDEK API как есть, кроме widget_city: это внутренний
+      # параметр engine'а, который нормализуется в CDEK city_code.
       def cdek_filtered_params
-        request.query_parameters
-               .merge(request.request_parameters)
-               .except(*EXCLUDED_PARAM_KEYS, WRAPPER_KEY)
-               .to_h
+        raw_params = request.query_parameters
+                            .merge(request.request_parameters)
+                            .except(*EXCLUDED_PARAM_KEYS, WRAPPER_KEY)
+                            .to_h
+
+        cdek_params_with_city_code(raw_params)
+      end
+
+      def cdek_params_with_city_code(raw_params)
+        params = raw_params.except(WIDGET_CITY_KEY)
+        city_code = raw_params["city_code"].presence || Cdek.city_code(raw_params[WIDGET_CITY_KEY])
+
+        if city_code.present?
+          params.merge("city_code" => city_code).compact
+        else
+          params.compact
+        end
       end
   end
 end

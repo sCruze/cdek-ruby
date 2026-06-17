@@ -8,6 +8,8 @@ require "cdek/client"
 require "cdek/resources/base"
 require "cdek/resources/locations"
 require "cdek/resources/deliverypoints"
+require "cdek/city_resolver"
+require "cdek/city_suggestions"
 
 module Cdek
   CLIENT_MUTEX = Mutex.new
@@ -59,6 +61,16 @@ module Cdek
     # High-level ресурс «Пункты выдачи» — список ПВЗ/постаматов по фильтрам.
     def deliverypoints(custom_client = client)
       Resources::Deliverypoints.new(custom_client)
+    end
+
+    # CDEK-код города по пользовательскому названию.
+    def city_code(name, **options)
+      CityResolver.call(name, **options)
+    end
+
+    # Нормализованные подсказки городов для autocomplete в хост-приложении.
+    def city_suggestions(query, **options)
+      CitySuggestions.call(query, **options)
     end
   end
 end
