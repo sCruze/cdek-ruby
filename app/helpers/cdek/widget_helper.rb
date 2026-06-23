@@ -51,6 +51,7 @@ module Cdek
       data = cdek_widget_data(
         api_key:           api_key.presence || ENV["YANDEX_MAPS_API_KEY"].to_s,
         default_city:      default_city,
+        default_coords:    cdek_default_coords(default_city),
         sender_city:       sender_city,
         sender_city_code:  sender_city_code.to_s,
         goods_json:        JSON.generate(goods_payload),
@@ -91,7 +92,7 @@ module Cdek
 
     # Хэш data-* атрибутов для Stimulus-контроллера cdek-widget.
     # Ключи в snake_case — Rails сам конвертит "_" в "-" в HTML.
-    def cdek_widget_data(api_key:, default_city:, sender_city:, sender_city_code:,
+    def cdek_widget_data(api_key:, default_city:, default_coords:, sender_city:, sender_city_code:,
                          goods_json:,
                          service_path:, script_url:, modal_id:,
                          field_code:, field_name:, field_address:, field_city_code:,
@@ -102,6 +103,7 @@ module Cdek
         cdek_widget_script_url_value:        script_url,
         cdek_widget_api_key_value:           api_key,
         cdek_widget_default_location_value:  default_city,
+        cdek_widget_default_coords_value:    default_coords,
         cdek_widget_sender_city_value:       sender_city,
         cdek_widget_sender_city_code_value:  sender_city_code,
         cdek_widget_goods_value:             goods_json,
@@ -113,6 +115,21 @@ module Cdek
         cdek_widget_label_selector_value:    label_selector,
         cdek_widget_address_selector_value:  address_selector
       }
+    end
+
+    # Координаты города «по умолчанию» строкой "долгота,широта" для data-атрибута
+    # (или "" если город пуст / не нашёлся / CDEK недоступен). JS-контроллер
+    # передаёт их виджету как defaultLocation = [lng, lat]; при пустой строке
+    # он откатывается на defaultLocation = название города (прежнее поведение).
+    def cdek_default_coords(city_name)
+      coords =
+        begin
+          Cdek.city_coordinates(city_name)
+        rescue Cdek::Error
+          nil
+        end
+
+      coords.is_a?(Array) && coords.length == 2 ? coords.join(",") : ""
     end
 
     # Путь до UMD-бандла виджета, вшитого в гем. Используется JS-контроллером

@@ -68,6 +68,13 @@ module Cdek
       CityResolver.call(name, **options)
     end
 
+    # Координаты [долгота, широта] города по пользовательскому названию
+    # (или nil, если город/координаты не нашлись). Нужны виджету, чтобы
+    # центрировать карту по выбранному городу координатами, а не названием.
+    def city_coordinates(name, **options)
+      CityResolver.coordinates(name, **options)
+    end
+
     # Нормализованные подсказки городов для autocomplete в хост-приложении.
     def city_suggestions(query, **options)
       CitySuggestions.call(query, **options)
