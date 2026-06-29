@@ -43,6 +43,7 @@ module Cdek
                         field_name:      "order_cdek_point_name",
                         field_address:   "order_cdek_point_address",
                         field_city_code: "order_cdek_city_code",
+                        field_coors:     "order_cdek_point_coors",
                         label_selector:    "[data-cdek-widget-label]",
                         address_selector:  "#order_cdek_point_address_view",
                         height: "600px")
@@ -62,6 +63,7 @@ module Cdek
         field_name:        field_name,
         field_address:     field_address,
         field_city_code:   field_city_code,
+        field_coors:       field_coors,
         label_selector:    label_selector,
         address_selector:  address_selector
       )
@@ -95,7 +97,7 @@ module Cdek
     def cdek_widget_data(api_key:, default_city:, default_coords:, sender_city:, sender_city_code:,
                          goods_json:,
                          service_path:, script_url:, modal_id:,
-                         field_code:, field_name:, field_address:, field_city_code:,
+                         field_code:, field_name:, field_address:, field_city_code:, field_coors:,
                          label_selector:, address_selector:)
       {
         controller: "cdek-widget",
@@ -112,6 +114,7 @@ module Cdek
         cdek_widget_field_name_value:        field_name,
         cdek_widget_field_address_value:     field_address,
         cdek_widget_field_city_code_value:   field_city_code,
+        cdek_widget_field_coors_value:       field_coors,
         cdek_widget_label_selector_value:    label_selector,
         cdek_widget_address_selector_value:  address_selector
       }

@@ -115,9 +115,11 @@ suggestions = Cdek.city_suggestions("мос")
    * `#order_cdek_point_name`
    * `#order_cdek_point_address`
    * `#order_cdek_city_code`
+   * `#order_cdek_point_coors` — координаты ПВЗ строкой `"долгота широта"`
+     (из `office.location`), чтобы хост мог отрисовать карту заказа.
 
    DOM-id переопределяются именованными аргументами `field_code`,
-   `field_name`, `field_address`, `field_city_code` хелпера.
+   `field_name`, `field_address`, `field_city_code`, `field_coors` хелпера.
 
 5. Также диспатчится событие `cdek-widget:chosen` с `detail.office` —
    можно слушать в собственных Stimulus-контроллерах.
